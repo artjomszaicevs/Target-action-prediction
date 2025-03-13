@@ -1,3 +1,52 @@
+# 1. Чтение данных из файла (с учётом разделителей)
+kordat <- read.table("data.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+# 2. Преобразование колонок 9 и выше в факторы
+cols_to_factor <- 9:ncol(kordat)
+kordat[cols_to_factor] <- lapply(kordat[cols_to_factor], as.factor)
+
+# 3. Подсчёт количества записей в каждом уровне фактора
+factor_summary <- sapply(kordat[cols_to_factor], function(x) table(x))
+write.table(factor_summary, "results.txt", sep="\t")
+
+# 4. Сортировка по колонке "Slope"
+sl.by.b <- kordat[order(kordat$Slope), ]
+write.table(sl.by.b, "results.txt", append=TRUE, sep="\t")
+
+# 5. Создание колонки "Average"
+kordat$Average <- rowMeans(kordat[, c("Slope", "Intercept", "adj.r.squared")], na.rm=TRUE)
+
+# 6. Вычисление стандартного отклонения по уровням фактора
+std_dev <- aggregate(kordat$Average, by=list(kordat$f), FUN=sd)
+write.table(std_dev, "results.txt", append=TRUE, sep="\t")
+
+# 7. Создание `prockordat` для значений adj.r.squared > 0.7
+prockordat <- subset(kordat, adj.r.squared > 0.7)
+
+# 8. Пересчёт "Slope" по формуле 1 - 1/k
+prockordat$Slope <- 1 - 1/prockordat$Slope
+
+# 9. Сохранение `prockordat` в файл
+write.table(prockordat, "results.txt", append=TRUE, sep="\t")
+
+# 10. График рассеяния (scatter.svg)
+library(ggplot2)
+ggplot(kordat, aes(x = MAD, y = Average)) +
+  geom_point() +
+  ggtitle("Scatter Plot") +
+  ggsave("scatter.svg")
+
+# 11. Boxplot для "Intercept", сгруппированный по "f"
+ggplot(kordat, aes(x = f, y = Intercept)) +
+  geom_boxplot() +
+  ggtitle("Boxplot of Intercept by f levels") +
+  ggsave("boxplot.svg")
+
+######################################
+
+
+
+
 # Client Action Prediction Project
 
 ## Description
