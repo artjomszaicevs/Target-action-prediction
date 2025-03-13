@@ -1,11 +1,12 @@
-# 1. Чтение данных из файла (с учётом разделителей)
-kordat <- read.table("data.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+# 1. Загрузка данных
+file_path <- "variants17.txt"
+kordat <- read.table(file_path, header = TRUE, sep = "\t", stringsAsFactors = FALSE, dec = ",")
 
-# 2. Преобразование колонок 9 и выше в факторы
+# 2. Преобразование колонок с 9-й и выше в факторы
 cols_to_factor <- 9:ncol(kordat)
 kordat[cols_to_factor] <- lapply(kordat[cols_to_factor], as.factor)
 
-# 3. Подсчёт количества записей в каждом уровне фактора
+# 3. Подсчет количества записей в каждом уровне фактора и сохранение в файл
 factor_summary <- sapply(kordat[cols_to_factor], function(x) table(x))
 write.table(factor_summary, "results.txt", sep="\t")
 
@@ -13,34 +14,45 @@ write.table(factor_summary, "results.txt", sep="\t")
 sl.by.b <- kordat[order(kordat$Slope), ]
 write.table(sl.by.b, "results.txt", append=TRUE, sep="\t")
 
-# 5. Создание колонки "Average"
+# 5. Создание новой колонки "Average" (среднее арифметическое колонок "Slope", "Intercept", "adj.r.squared")
 kordat$Average <- rowMeans(kordat[, c("Slope", "Intercept", "adj.r.squared")], na.rm=TRUE)
 
-# 6. Вычисление стандартного отклонения по уровням фактора
+# 6. Вычисление стандартного отклонения по уровням фактора и запись в файл
 std_dev <- aggregate(kordat$Average, by=list(kordat$f), FUN=sd)
 write.table(std_dev, "results.txt", append=TRUE, sep="\t")
 
-# 7. Создание `prockordat` для значений adj.r.squared > 0.7
+# 7. Фильтрация `prockordat` для строк, где "adj.r.squared" > 0.7
 prockordat <- subset(kordat, adj.r.squared > 0.7)
 
-# 8. Пересчёт "Slope" по формуле 1 - 1/k
+# 8. Пересчёт значений в "Slope" по формуле 1 - 1/k
 prockordat$Slope <- 1 - 1/prockordat$Slope
 
 # 9. Сохранение `prockordat` в файл
 write.table(prockordat, "results.txt", append=TRUE, sep="\t")
 
-# 10. График рассеяния (scatter.svg)
+# 10. Построение графика рассеяния (scatter.svg)
 library(ggplot2)
 ggplot(kordat, aes(x = MAD, y = Average)) +
   geom_point() +
   ggtitle("Scatter Plot") +
   ggsave("scatter.svg")
 
-# 11. Boxplot для "Intercept", сгруппированный по "f"
+# 11. Построение boxplot (boxplot.svg) по "Intercept", группируя по "f"
 ggplot(kordat, aes(x = f, y = Intercept)) +
   geom_boxplot() +
   ggtitle("Boxplot of Intercept by f levels") +
   ggsave("boxplot.svg")
+
+# 12. Дополнительное задание: Найти наиболее частый уровень фактора
+factor_levels <- unlist(strsplit(rownames(kordat), "[.]"))
+most_common_level <- names(which.max(table(factor_levels)))
+
+# Фильтрация строк, содержащих этот уровень
+filtered_rows <- kordat[grep(most_common_level, rownames(kordat)), ]
+
+# Вывод результата на экран
+print(filtered_rows)
+
 
 ######################################
 
